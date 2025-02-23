@@ -1,0 +1,16 @@
+[package]
+name = "web-crawler-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = "0.12.12"
+robotstxt = "0.3.0"
+scraper = "0.22.0"
+sha2 = "0.10.8"
+thiserror = "2.0.11"
+tokio = { version = "1", features = ["full"] }
+url = "2.5.4"
+
+[dev-dependencies]
+wiremock = "0.6.2"
