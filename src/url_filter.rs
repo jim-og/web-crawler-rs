@@ -1,12 +1,15 @@
 use robotstxt::DefaultMatcher;
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    sync::{Arc, Mutex},
+};
 use url::Url;
 
 #[derive(Default)]
 pub struct UrlFilter {
     _max_depth: usize, // TODO
     subdomain: String,
-    data_store: HashSet<Url>,
+    data_store: Arc<Mutex<HashSet<Url>>>,
     robots_txt: String,
 }
 
@@ -15,12 +18,12 @@ impl UrlFilter {
         UrlFilter {
             _max_depth: max_depth,
             subdomain,
-            data_store: HashSet::new(),
+            data_store: Arc::new(Mutex::new(HashSet::new())),
             robots_txt,
         }
     }
 
-    pub fn filter(&mut self, urls: HashSet<Url>) -> HashSet<Url> {
+    pub fn filter(&self, urls: HashSet<Url>) -> HashSet<Url> {
         // Exclude certain content types
         // Exclude file extensions
         // Exclude error links
@@ -35,11 +38,20 @@ impl UrlFilter {
             .filter(|url| self.allowed(url))
             .collect();
 
+        let mut data_store = match self.data_store.lock().ok() {
+            Some(store) => store,
+            // If the lock is poisoned do not continue processing.
+            None => {
+                eprintln!("UrlFilter data store lock poisioned");
+                return HashSet::new();
+            }
+        };
+
         filtered
             .into_iter()
             // Exclude URLs which have been seen before, add new URLs to data store.
             .filter_map(|url| {
-                if self.data_store.insert(url.clone()) {
+                if data_store.insert(url.clone()) {
                     Some(url) // New, keep
                 } else {
                     None // Already seen, skip
@@ -119,7 +131,7 @@ mod tests {
     async fn filter_new_urls() {
         let start_url = Url::parse("https://monzo.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
-        let mut url_filter = UrlFilter::new(100, subdomain, build_robots_txt());
+        let url_filter = UrlFilter::new(100, subdomain, build_robots_txt());
         let urls = build_urls();
         let filtered = url_filter.filter(urls);
         assert_eq!(filtered.len(), 21);
@@ -129,7 +141,7 @@ mod tests {
     async fn filter_visited_urls() {
         let start_url = Url::parse("https://monzo.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
-        let mut url_filter = UrlFilter::new(100, subdomain, build_robots_txt());
+        let url_filter = UrlFilter::new(100, subdomain, build_robots_txt());
         let mut urls = build_urls();
         url_filter.filter(urls.clone());
 
@@ -142,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    fn robots_txt() {
+    fn apply_robots_txt() {
         let start_url = Url::parse("https://monzo.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
         let url_filter = UrlFilter::new(100, subdomain, build_robots_txt());

@@ -1,35 +1,46 @@
 use scraper::{Html, Selector};
 use sha2::{Digest, Sha256};
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    sync::{Arc, Mutex},
+};
 use url::Url;
 
 #[derive(Default)]
 pub struct HtmlParser {
-    data_store: HashSet<String>, // TODO move to separate component
+    data_store: Arc<Mutex<HashSet<String>>>, // TODO move to separate component
 }
 
 impl HtmlParser {
     /// Parse the HTML page body and return links (Blocking)
-    pub fn parse(&mut self, body: String) -> HashSet<Url> {
+    pub fn parse(&self, body: String) -> HashSet<Url> {
         // Check whether this page has been visited before.
         if self.visited_before(&body) {
-            println!("visited before"); // TODO
             return HashSet::new();
         }
-        println!("not visited before"); // TODO
 
         // Page hasn't been seen, extract URLs.
         Self::extract_urls(body)
     }
 
     /// Calculate hash of the body and check whether it has been seen before.
-    fn visited_before(&mut self, body: &str) -> bool {
+    fn visited_before(&self, body: &str) -> bool {
         let body_hash = Self::calculate_hash(body);
-        if self.data_store.contains(&body_hash) {
-            return true; // TODO better way of returning early?
+
+        let mut data_store = match self.data_store.lock().ok() {
+            Some(store) => store,
+            // If the lock is poisoned, assume the page hasn't been visited before and continue.
+            None => {
+                eprintln!("HtmlParser data store lock poisioned");
+                return false;
+            }
+        };
+
+        if data_store.contains(&body_hash) {
+            return true;
         }
         // Track this page's hash for future comparisons.
-        self.data_store.insert(body_hash);
+        data_store.insert(body_hash);
         false
     }
 
@@ -73,16 +84,16 @@ mod tests {
 
     #[tokio::test]
     async fn visited_new() {
-        let mut html_parser = HtmlParser::default();
-        assert!(html_parser.visited_before(&build_html(&"https://example.com/kolo".to_string())));
-        assert!(html_parser.visited_before(&build_html(&"https://example.com/yaya".to_string())));
+        let html_parser = HtmlParser::default();
+        assert!(!html_parser.visited_before(&build_html(&"https://example.com/kolo".to_string())));
+        assert!(!html_parser.visited_before(&build_html(&"https://example.com/yaya".to_string())));
     }
 
     #[tokio::test]
     async fn visited_again() {
-        let mut html_parser = HtmlParser::default();
-        assert!(html_parser.visited_before(&build_html(&"https://example.com/kolo".to_string())));
+        let html_parser = HtmlParser::default();
         assert!(!html_parser.visited_before(&build_html(&"https://example.com/kolo".to_string())));
+        assert!(html_parser.visited_before(&build_html(&"https://example.com/kolo".to_string())));
     }
 
     #[tokio::test]
