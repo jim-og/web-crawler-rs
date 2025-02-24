@@ -7,16 +7,14 @@ use url::Url;
 
 #[derive(Default)]
 pub struct UrlFilter {
-    _max_depth: usize, // TODO
     subdomain: String,
     data_store: Arc<Mutex<HashSet<Url>>>,
     robots_txt: String,
 }
 
 impl UrlFilter {
-    pub fn new(max_depth: usize, subdomain: String, robots_txt: String) -> Self {
+    pub fn new(subdomain: String, robots_txt: String) -> Self {
         UrlFilter {
-            _max_depth: max_depth,
             subdomain,
             data_store: Arc::new(Mutex::new(HashSet::new())),
             robots_txt,
@@ -24,12 +22,10 @@ impl UrlFilter {
     }
 
     pub fn filter(&self, urls: HashSet<Url>) -> HashSet<Url> {
-        // Exclude certain content types
-        // Exclude file extensions
-        // Exclude error links
-        // Exclude links not in this subdomain
-        // Exclude Robots.txt disallowed. Better doing at HtmlDownloader level.
-        // Exclude long URL spider traps
+        // TODO Exclude certain content types
+        // TODO Exclude file extensions
+        // TODO Exclude error links
+        // TODO Exclude long URL spider traps
         let filtered: Vec<Url> = urls
             .into_iter()
             // Exclude URLs which do not match the subdomain.
@@ -131,7 +127,7 @@ mod tests {
     async fn filter_new_urls() {
         let start_url = Url::parse("https://monzo.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
-        let url_filter = UrlFilter::new(100, subdomain, build_robots_txt());
+        let url_filter = UrlFilter::new(subdomain, build_robots_txt());
         let urls = build_urls();
         let filtered = url_filter.filter(urls);
         assert_eq!(filtered.len(), 21);
@@ -141,7 +137,7 @@ mod tests {
     async fn filter_visited_urls() {
         let start_url = Url::parse("https://monzo.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
-        let url_filter = UrlFilter::new(100, subdomain, build_robots_txt());
+        let url_filter = UrlFilter::new(subdomain, build_robots_txt());
         let mut urls = build_urls();
         url_filter.filter(urls.clone());
 
@@ -157,7 +153,7 @@ mod tests {
     fn apply_robots_txt() {
         let start_url = Url::parse("https://monzo.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
-        let url_filter = UrlFilter::new(100, subdomain, build_robots_txt());
+        let url_filter = UrlFilter::new(subdomain, build_robots_txt());
 
         let allow_1 = start_url.join("faq/").unwrap();
         let allow_2 = Url::parse("https://instagram.com/monzo").unwrap();
