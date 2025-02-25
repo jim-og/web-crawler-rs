@@ -1,10 +1,10 @@
 # web-crawler-rs
-A web crawler, written in Rust, which is designed to crawl a single domain. For each URL visited a list of links are printed to `stdout`. If you're just getting started with Rust, see the [Install Rust](https://www.rust-lang.org/tools/install) page for instructions on how to get started.
+A web crawler which is designed to crawl a single domain. For each URL visited a list of links are printed to `stdout`. If you're just getting started with Rust, see the [Install Rust](https://www.rust-lang.org/tools/install) page for instructions on how to get started.
 
 ## Usage
 
 ```
-$ cargo run -r -- https://monzo.com/
+$ cargo run -r -- https://example.com/
 ```
 
 To run tests:
@@ -12,10 +12,24 @@ To run tests:
 $ cargo test
 ```
 
+Example output:
+```
+https://example.com/
+-- https://example.com/about
+-- https://example.com/careers
+
+https://example.com/about
+-- https://example.com/team
+```
+
 ## Assumptions
 
-- The chosen domain can be crawled without delay.
-- Setting the `User-Agent` header to `Mozilla/5.0 (Windows NT 10.0; Win64; x64)` is sufficient to bypass CloudFlare protection.
+- The crawler will start with one seed URL.
+- Only URLs in the same subdomain as the seed URL will be visited.
+- External domains will not be followed.
+- The crawler should not visit the same page twice.
+- `robots.txt` should be adhered to.
+- Pages that return non-200 status codes should be skipped.
 
 ## Design
 
@@ -57,11 +71,11 @@ A multi-producer, single-consumer (mpsc) channel is set up to manage the queue o
 Asynchronously fetches the HTML content from a given URL using the `reqwest` client.
 
 ### HtmlParser
-Parses the HTML body to extract links. Initially the hash of the body is calculated and compared to values stored in the `HtmlStore` to determine whether this page has been seen before. This can happen if two different URLs route to the same page. New values are added to this store as part of the lookup.
+Parses the HTML body to extract links. The hash of the body is calculated and compared to values stored in the `HtmlStore` to determine whether this page has been seen before. This can happen if two different URLs route to the same page. New values are added to this store as part of the lookup.
 
 ### UrlFilter
 URLs are filtered based on the following criteria:
-- If they been visited before, by performing a lookup in the `UrlStore`. New URLs are added to this store as part of the lookup.
+- If they have been visited before, by performing a lookup in the `UrlStore`. New URLs are added to this store as part of the lookup.
 - If they are disallowed by the domain's `robots.txt`.
 - If the URL does not match the subdomain being crawled.
 
@@ -71,6 +85,6 @@ Provides a thread safe data store. This implementation uses a `HashSet` but coul
 ## Improvements
 - URL filtering to avoid spider traps. Examples of this could be a link to a calendar which has an infinite number of pages, or an infinitely deep directory structure.
 - Config for politeness. Set how long to wait between making requests to the same domain.
-- Add retry behaviour to requests with exponential back-off when the server is currently busy.
+- Add support for retrying failed requests with exponential back-off when the server is busy.
 - Config for async runtime settings. By default, the tokio runtime uses a thread pool matching the number of CPU cores.
 - A cache DNS resolver could improve performance by limiting the number of DNS requests made on the network.

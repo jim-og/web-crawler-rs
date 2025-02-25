@@ -12,7 +12,7 @@ impl Printer {
 
         buffer.push_str(&format!("{}\n", url));
         for link in links {
-            buffer.push_str(&format!("--{}\n", link));
+            buffer.push_str(&format!("-- {}\n", link));
         }
 
         writeln!(wrt, "{}", buffer)?;
