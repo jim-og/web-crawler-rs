@@ -60,40 +60,40 @@ mod tests {
     fn build_urls() -> HashSet<Url> {
         // Dataset contains 21 links with a matching subdomain.
         let links = vec![
-            "https://we83.adj.st/home?adj_t=1dj2rkno_1dxkjz95&adj_redirect=https%3A%2F%2Fmonzo.com%2Fsign-up&adj_engagement_type=fallback_click",
-            "https://uk.trustpilot.com/review/www.monzo.com",
-            "https://we83.adj.st/home?adj_t=1dj2rkno&adj_fallback=https%3A%2F%2Fmonzo.com%2Fdownload&adj_engagement_type=fallback_click",
-            "https://app.adjust.com/1dxkjz95?fallback=https%3A%2F%2Fmonzo.com%2Fdownload&engagement_type=fallback_click",
+            "https://we83.adj.st/home?adj_t=1dj2rkno_1dxkjz95&adj_redirect=https%3A%2F%2Fexample.com%2Fsign-up&adj_engagement_type=fallback_click",
+            "https://uk.trustpilot.com/review/www.example.com",
+            "https://we83.adj.st/home?adj_t=1dj2rkno&adj_fallback=https%3A%2F%2Fexample.com%2Fdownload&adj_engagement_type=fallback_click",
+            "https://app.adjust.com/1dxkjz95?fallback=https%3A%2F%2Fexample.com%2Fdownload&engagement_type=fallback_click",
             "https://www.psr.org.uk/app-fraud-data",
-            "https://we83.adj.st/home?adj_t=1dj2rkno&adj_redirect=https%3A%2F%2Fmonzo.com%2Fsign-up&adj_engagement_type=fallback_click",
-            "https://app.adjust.com/1dxkjz95?redirect=https%3A%2F%2Fmonzo.com%2Fsign-up&engagement_type=fallback_click",
-            "https://monzo.com/help",
-            "https://monzo.com/about",
-            "https://monzo.com/us",
-            "https://monzo.com/blog",
-            "https://monzo.com/press",
-            "https://web.monzo.com/",
-            "https://monzo.com/investor-information",
-            "https://monzo.com/supporting-all-our-customers",
-            "https://monzo.com/helping-everyone-belong-at-monzo",
-            "https://monzo.com/fraud",
-            "https://monzo.com/tone-of-voice",
-            "https://monzo.com/business-banking",
-            "https://monzo.com/modern-slavery-statements",
-            "https://monzo.com/faq",
-            "https://monzo.com/legal/terms-and-conditions/",
-            "https://monzo.com/legal/fscs-information/",
-            "https://monzo.com/legal/privacy-notice/",
-            "https://monzo.com/legal/cookie-notice/",
-            "https://monzo.com/legal/browser-support-policy/",
-            "https://monzo.com/legal/mobile-operating-system-support-policy/",
-            "https://monzo.com/information-about-current-account-services",
-            "https://monzo.com/service-information",
-            "https://twitter.com/monzo",
-            "https://www.instagram.com/monzo",
-            "https://www.facebook.com/monzobank",
-            "https://www.linkedin.com/company/monzo-bank",
-            "https://www.youtube.com/monzobank"
+            "https://we83.adj.st/home?adj_t=1dj2rkno&adj_redirect=https%3A%2F%2Fexample.com%2Fsign-up&adj_engagement_type=fallback_click",
+            "https://app.adjust.com/1dxkjz95?redirect=https%3A%2F%2Fexample.com%2Fsign-up&engagement_type=fallback_click",
+            "https://example.com/help",
+            "https://example.com/about",
+            "https://example.com/us",
+            "https://example.com/blog",
+            "https://example.com/press",
+            "https://web.example.com/",
+            "https://example.com/investor-information",
+            "https://example.com/supporting-all-our-customers",
+            "https://example.com/helping-everyone-belong-at-example",
+            "https://example.com/fraud",
+            "https://example.com/tone-of-voice",
+            "https://example.com/business-banking",
+            "https://example.com/modern-slavery-statements",
+            "https://example.com/faq",
+            "https://example.com/legal/terms-and-conditions/",
+            "https://example.com/legal/fscs-information/",
+            "https://example.com/legal/privacy-notice/",
+            "https://example.com/legal/cookie-notice/",
+            "https://example.com/legal/browser-support-policy/",
+            "https://example.com/legal/mobile-operating-system-support-policy/",
+            "https://example.com/information-about-current-account-services",
+            "https://example.com/service-information",
+            "https://twitter.com/example",
+            "https://www.instagram.com/example",
+            "https://www.facebook.com/example",
+            "https://www.linkedin.com/company/example",
+            "https://www.youtube.com/example"
         ];
         links
             .iter()
@@ -114,7 +114,7 @@ mod tests {
 
     #[tokio::test]
     async fn filter_new_urls() {
-        let start_url = Url::parse("https://monzo.com/").unwrap();
+        let start_url = Url::parse("https://example.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
         let url_filter = UrlFilter::new(subdomain, build_robots_txt());
         let urls = build_urls();
@@ -124,14 +124,14 @@ mod tests {
 
     #[tokio::test]
     async fn filter_visited_urls() {
-        let start_url = Url::parse("https://monzo.com/").unwrap();
+        let start_url = Url::parse("https://example.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
         let url_filter = UrlFilter::new(subdomain, build_robots_txt());
         let mut urls = build_urls();
         url_filter.filter(urls.clone());
 
         // Add a new URL to the dataset and filter again, only this URL should be returned.
-        let new_url = Url::parse("https://monzo.com/gonzo").unwrap();
+        let new_url = Url::parse("https://example.com/gonzo").unwrap();
         urls.insert(new_url.clone());
         let filtered = url_filter.filter(urls);
         assert_eq!(filtered.len(), 1);
@@ -140,12 +140,12 @@ mod tests {
 
     #[test]
     fn apply_robots_txt() {
-        let start_url = Url::parse("https://monzo.com/").unwrap();
+        let start_url = Url::parse("https://example.com/").unwrap();
         let subdomain = start_url.host_str().unwrap().to_string();
         let url_filter = UrlFilter::new(subdomain, build_robots_txt());
 
         let allow_1 = start_url.join("faq/").unwrap();
-        let allow_2 = Url::parse("https://instagram.com/monzo").unwrap();
+        let allow_2 = Url::parse("https://instagram.com/example").unwrap();
         let allow_3 = start_url.join("legal/docs/").unwrap();
         assert!(url_filter.allowed(&allow_1));
         assert!(url_filter.allowed(&allow_2));
