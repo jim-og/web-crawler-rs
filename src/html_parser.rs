@@ -1,18 +1,16 @@
+use crate::store::Store;
 use scraper::{Html, Selector};
 use sha2::{Digest, Sha256};
-use std::{
-    collections::HashSet,
-    sync::{Arc, Mutex},
-};
+use std::collections::HashSet;
 use url::Url;
 
 #[derive(Default)]
 pub struct HtmlParser {
-    data_store: Arc<Mutex<HashSet<String>>>, // TODO move to separate component
+    html_store: Store<String>,
 }
 
 impl HtmlParser {
-    /// Parse the HTML page body and return links (Blocking)
+    /// Parse the HTML body and return the links found on that page.
     pub fn parse(&self, body: String) -> HashSet<Url> {
         // Check whether this page has been visited before.
         if self.visited_before(&body) {
@@ -27,29 +25,18 @@ impl HtmlParser {
     fn visited_before(&self, body: &str) -> bool {
         let body_hash = Self::calculate_hash(body);
 
-        let mut data_store = match self.data_store.lock().ok() {
-            Some(store) => store,
-            // If the lock is poisoned, assume the page hasn't been visited before and continue.
-            None => {
-                eprintln!("HtmlParser data store lock poisioned");
-                return false;
-            }
-        };
-
-        if data_store.contains(&body_hash) {
-            return true;
-        }
-        // Track this page's hash for future comparisons.
-        data_store.insert(body_hash);
-        false
+        // Store this page's hash for future comparisons.
+        !self.html_store.insert(body_hash)
     }
 
+    /// Calculate the SHA-256 hash of the body.
     fn calculate_hash(body: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(body);
         format!("{:x}", hasher.finalize())
     }
 
+    /// Extract the links found in the body.
     fn extract_urls(body: String) -> HashSet<Url> {
         let html = Html::parse_document(&body);
         let selector = Selector::parse("a").unwrap();
@@ -83,14 +70,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn visited_new() {
+    async fn visit_new_page() {
         let html_parser = HtmlParser::default();
         assert!(!html_parser.visited_before(&build_html(&"https://example.com/kolo".to_string())));
         assert!(!html_parser.visited_before(&build_html(&"https://example.com/yaya".to_string())));
     }
 
     #[tokio::test]
-    async fn visited_again() {
+    async fn visit_same_page() {
         let html_parser = HtmlParser::default();
         assert!(!html_parser.visited_before(&build_html(&"https://example.com/kolo".to_string())));
         assert!(html_parser.visited_before(&build_html(&"https://example.com/kolo".to_string())));
@@ -103,14 +90,4 @@ mod tests {
         assert!(urls.len() == 2);
         assert!(urls.contains(&Url::parse(&seed_link).unwrap()));
     }
-
-    // TODO
-    // #[tokio::test]
-    // async fn extract_real_urls() {
-    //     let downloader = HtmlDownloader::default();
-    //     let start_url = Url::parse("https://monzo.com/").unwrap();
-    //     let page = downloader.fetch(start_url).await.unwrap();
-    //     let urls = HtmlParser::extract_urls(page.body);
-    //     urls.iter().for_each(|link| println!("{}", link));
-    // }
 }

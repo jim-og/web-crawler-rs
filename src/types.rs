@@ -9,4 +9,6 @@ pub enum CrawlerError {
     ParseError(#[from] ParseError),
     #[error("Could not extract the subdomain from the URL {url:?}")]
     SubdomainError { url: Url },
+    #[error("please specify a single URL argument")]
+    InputMalformed,
 }

@@ -1,14 +1,11 @@
+use crate::store::Store;
 use robotstxt::DefaultMatcher;
-use std::{
-    collections::HashSet,
-    sync::{Arc, Mutex},
-};
+use std::collections::HashSet;
 use url::Url;
 
-#[derive(Default)]
 pub struct UrlFilter {
     subdomain: String,
-    data_store: Arc<Mutex<HashSet<Url>>>,
+    url_store: Store<Url>,
     robots_txt: String,
 }
 
@@ -16,16 +13,16 @@ impl UrlFilter {
     pub fn new(subdomain: String, robots_txt: String) -> Self {
         UrlFilter {
             subdomain,
-            data_store: Arc::new(Mutex::new(HashSet::new())),
+            url_store: Store::new(),
             robots_txt,
         }
     }
 
+    /// Filter a set of URLs based on the following criteria
+    /// 1. Be in the same subdomain.
+    /// 2. Are allowed by robots.txt.
+    /// 3. Have not been visited before.
     pub fn filter(&self, urls: HashSet<Url>) -> HashSet<Url> {
-        // TODO Exclude certain content types
-        // TODO Exclude file extensions
-        // TODO Exclude error links
-        // TODO Exclude long URL spider traps
         let filtered: Vec<Url> = urls
             .into_iter()
             // Exclude URLs which do not match the subdomain.
@@ -34,20 +31,11 @@ impl UrlFilter {
             .filter(|url| self.allowed(url))
             .collect();
 
-        let mut data_store = match self.data_store.lock().ok() {
-            Some(store) => store,
-            // If the lock is poisoned do not continue processing.
-            None => {
-                eprintln!("UrlFilter data store lock poisioned");
-                return HashSet::new();
-            }
-        };
-
         filtered
             .into_iter()
             // Exclude URLs which have been seen before, add new URLs to data store.
             .filter_map(|url| {
-                if data_store.insert(url.clone()) {
+                if self.url_store.insert(url.clone()) {
                     Some(url) // New, keep
                 } else {
                     None // Already seen, skip
@@ -56,6 +44,7 @@ impl UrlFilter {
             .collect()
     }
 
+    /// Determine whether the URL is allowed by robots.txt
     fn allowed(&self, url: &Url) -> bool {
         let mut matcher = DefaultMatcher::default();
         matcher.one_agent_allowed_by_robots(&self.robots_txt, "*", url.as_ref())

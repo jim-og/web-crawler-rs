@@ -7,13 +7,13 @@ pub struct HtmlDownloader {
 }
 
 pub struct HtmlPage {
-    pub _status: StatusCode, // TODO
+    pub status: StatusCode,
     pub body: String,
 }
 
 impl HtmlDownloader {
+    /// Fetch the HTML content of the URL.
     pub async fn fetch(&self, url: Url) -> Result<HtmlPage, reqwest::Error> {
-        // TODO could url be borrowed?
         let response = self
             .client
             .get(url.clone())
@@ -21,7 +21,7 @@ impl HtmlDownloader {
             .send()
             .await?;
         Ok(HtmlPage {
-            _status: response.status(),
+            status: response.status(),
             body: response.text().await?,
         })
     }
@@ -56,7 +56,7 @@ mod tests {
         let downloader = HtmlDownloader::default();
         let page = downloader.fetch(Url::parse(&url).unwrap()).await.unwrap();
 
-        assert_eq!(page._status.as_u16(), 200);
+        assert_eq!(page.status.as_u16(), 200);
         assert_eq!(page.body, response_body);
     }
 
@@ -68,7 +68,7 @@ mod tests {
         let downloader = HtmlDownloader::default();
         let page = downloader.fetch(Url::parse(&url).unwrap()).await.unwrap();
 
-        assert_eq!(page._status.as_u16(), 404);
+        assert_eq!(page.status.as_u16(), 404);
         assert_eq!(page.body, "");
     }
 }
