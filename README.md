@@ -1,5 +1,5 @@
 # web-crawler-rs
-A web crawler which is designed to crawl a single domain. For each URL visited a list of links are printed to `stdout`. If you're just getting started with Rust, see the [Install Rust](https://www.rust-lang.org/tools/install) page for instructions on how to get started.
+A web crawler which is designed to crawl a single domain. For each URL visited a list of links are printed to `stdout`. If you're just getting started with Rust, see the [Install Rust](https://www.rust-lang.org/tools/install) page for instructions on how to get set up.
 
 ## Usage
 
